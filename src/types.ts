@@ -1,5 +1,11 @@
 import type * as vscode from 'vscode';
 
+export interface ToolHistoryEntry {
+  toolName: string;
+  status: string;
+  timestamp: number;
+}
+
 export interface AgentState {
   id: number;
   terminalRef: vscode.Terminal;
@@ -20,6 +26,8 @@ export interface AgentState {
   currentRole: string | null;
   /** Manual role override set by user (prevents auto-detection) */
   manualRoleOverride: string | null;
+  /** Recent tool usage history (last 10 entries) */
+  toolHistory: ToolHistoryEntry[];
   /** Workspace folder name (only set for multi-root workspaces) */
   folderName?: string;
 }

@@ -87,6 +87,7 @@ export async function launchNewTerminal(
     hadToolsInTurn: false,
     currentRole: null,
     manualRoleOverride: null,
+    toolHistory: [],
     folderName,
   };
 
@@ -245,6 +246,7 @@ export function restoreAgents(
       hadToolsInTurn: false,
       currentRole: null,
       manualRoleOverride: null,
+      toolHistory: [],
       folderName: p.folderName,
     };
 

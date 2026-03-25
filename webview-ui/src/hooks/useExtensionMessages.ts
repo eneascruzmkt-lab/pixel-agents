@@ -46,6 +46,18 @@ export interface WorkspaceFolder {
   path: string;
 }
 
+export interface InspectData {
+  agentId: number;
+  role: string | null;
+  roleColor: string | null;
+  tokenUsed: number | null;
+  tokenLimit: number | null;
+  tokenPercentage: number | null;
+  tokenColor: string | null;
+  toolHistory: Array<{ toolName: string; status: string; timestamp: number }>;
+  activeTools: string[];
+}
+
 export interface ExtensionMessageState {
   agents: number[];
   selectedAgent: number | null;
@@ -59,6 +71,7 @@ export interface ExtensionMessageState {
   workspaceFolders: WorkspaceFolder[];
   externalAssetDirectories: string[];
   contextLimit: number;
+  inspectData: InspectData | null;
 }
 
 function saveAgentSeats(os: OfficeState): void {
@@ -91,6 +104,7 @@ export function useExtensionMessages(
   const [workspaceFolders, setWorkspaceFolders] = useState<WorkspaceFolder[]>([]);
   const [externalAssetDirectories, setExternalAssetDirectories] = useState<string[]>([]);
   const [contextLimit, setContextLimit] = useState<number>(200000);
+  const [inspectData, setInspectData] = useState<InspectData | null>(null);
 
   // Track whether initial layout has been loaded (ref to avoid re-render)
   const layoutReadyRef = useRef(false);
@@ -424,6 +438,18 @@ export function useExtensionMessages(
         setTimeout(() => {
           os.dismissNotificationBubble(agentId);
         }, 5000);
+      } else if (msg.type === 'agentInspectData') {
+        setInspectData({
+          agentId: msg.agentId as number,
+          role: msg.role as string | null,
+          roleColor: msg.roleColor as string | null,
+          tokenUsed: msg.tokenUsed as number | null,
+          tokenLimit: msg.tokenLimit as number | null,
+          tokenPercentage: msg.tokenPercentage as number | null,
+          tokenColor: msg.tokenColor as string | null,
+          toolHistory: msg.toolHistory as InspectData['toolHistory'],
+          activeTools: msg.activeTools as string[],
+        });
       } else if (msg.type === 'furnitureAssetsLoaded') {
         try {
           const catalog = msg.catalog as FurnitureAsset[];
@@ -455,5 +481,6 @@ export function useExtensionMessages(
     workspaceFolders,
     externalAssetDirectories,
     contextLimit,
+    inspectData,
   };
 }

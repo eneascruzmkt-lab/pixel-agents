@@ -37,7 +37,7 @@ import { ensureProjectScan } from './fileWatcher.js';
 import type { LayoutWatcher } from './layoutPersistence.js';
 import { readLayoutFromFile, watchLayoutFile, writeLayoutToFile } from './layoutPersistence.js';
 import { subscribeNotificationManager } from './notificationManager.js';
-import { ROLE_COLORS, subscribeRoleDetector } from './roleDetector.js';
+import { type AgentRole, ROLE_COLORS, subscribeRoleDetector } from './roleDetector.js';
 import { subscribeTokenTracker, TokenTracker } from './tokenTracker.js';
 import { TranscriptEventBus } from './transcriptEventBus.js';
 import { setEventBus } from './transcriptParser.js';
@@ -112,6 +112,21 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
       this.webviewView?.webview.postMessage(msg);
     });
 
+    // Track tool history for inspection panel
+    this.eventBus.subscribe('toolStart', (event) => {
+      const agent = this.agents.get(event.agentId);
+      if (!agent) return;
+      if (!agent.toolHistory) agent.toolHistory = [];
+      agent.toolHistory.push({
+        toolName: event.toolName,
+        status: event.status || event.toolName,
+        timestamp: Date.now(),
+      });
+      if (agent.toolHistory.length > 10) {
+        agent.toolHistory = agent.toolHistory.slice(-10);
+      }
+    });
+
     webviewView.webview.onDidReceiveMessage(async (message) => {
       if (message.type === 'openClaude') {
         await launchNewTerminal(
@@ -177,6 +192,25 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
           agentId: message.agentId,
           role: role || agent.currentRole,
           color: role ? ROLE_COLORS[role as keyof typeof ROLE_COLORS] : null,
+        });
+      } else if (message.type === 'inspectAgent') {
+        const agentId = message.agentId as number;
+        const agent = this.agents.get(agentId);
+        if (!agent) return;
+        const tokenData = this.tokenTracker.getAbsoluteUsage(agentId);
+        const pct = this.tokenTracker.getPercentageRemaining(agentId);
+        const tokenColor = this.tokenTracker.getColor(agentId);
+        webviewView.webview.postMessage({
+          type: 'agentInspectData',
+          agentId,
+          role: agent.currentRole,
+          roleColor: agent.currentRole ? ROLE_COLORS[agent.currentRole as AgentRole] : null,
+          tokenUsed: tokenData?.used ?? null,
+          tokenLimit: tokenData?.limit ?? null,
+          tokenPercentage: pct,
+          tokenColor,
+          toolHistory: agent.toolHistory ?? [],
+          activeTools: Array.from(agent.activeToolNames?.values() ?? []),
         });
       } else if (message.type === 'webviewReady') {
         restoreAgents(

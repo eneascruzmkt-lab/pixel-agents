@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { BottomToolbar } from './components/BottomToolbar.js';
 import { DebugView } from './components/DebugView.js';
+import { InspectionPanel } from './components/InspectionPanel.js';
 import { ZoomControls } from './components/ZoomControls.js';
 import { PULSE_ANIMATION_DURATION_SEC } from './constants.js';
 import { useEditorActions } from './hooks/useEditorActions.js';
@@ -149,6 +150,7 @@ function App() {
     workspaceFolders,
     externalAssetDirectories,
     contextLimit,
+    inspectData,
   } = useExtensionMessages(getOfficeState, editor.setLastSavedLayout, isEditDirty);
 
   // Show migration notice once layout reset is detected
@@ -157,6 +159,7 @@ function App() {
 
   const [isDebugMode, setIsDebugMode] = useState(false);
   const [alwaysShowOverlay, setAlwaysShowOverlay] = useState(false);
+  const [inspectedAgentId, setInspectedAgentId] = useState<number | null>(null);
 
   const handleToggleDebugMode = useCallback(() => setIsDebugMode((prev) => !prev), []);
   const handleToggleAlwaysShowOverlay = useCallback(
@@ -193,6 +196,9 @@ function App() {
     const meta = os.subagentMeta.get(agentId);
     const focusId = meta ? meta.parentAgentId : agentId;
     vscode.postMessage({ type: 'focusAgent', id: focusId });
+    // Request inspect data for the clicked agent (not in edit mode — edit mode clicks are handled separately)
+    vscode.postMessage({ type: 'inspectAgent', agentId: focusId });
+    setInspectedAgentId(focusId);
   }, []);
 
   const officeState = getOfficeState();
@@ -360,6 +366,15 @@ function App() {
           panRef={editor.panRef}
           onCloseAgent={handleCloseAgent}
           alwaysShowOverlay={alwaysShowOverlay}
+        />
+      )}
+
+      {inspectedAgentId !== null && inspectData && inspectData.agentId === inspectedAgentId && (
+        <InspectionPanel
+          data={inspectData}
+          onClose={() => {
+            setInspectedAgentId(null);
+          }}
         />
       )}
 
