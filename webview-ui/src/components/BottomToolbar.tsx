@@ -15,6 +15,8 @@ interface BottomToolbarProps {
   workspaceFolders: WorkspaceFolder[];
   externalAssetDirectories: string[];
   contextLimit: number;
+  showMetrics: boolean;
+  onToggleMetrics: () => void;
 }
 
 const panelStyle: React.CSSProperties = {
@@ -59,6 +61,8 @@ export function BottomToolbar({
   workspaceFolders,
   externalAssetDirectories,
   contextLimit,
+  showMetrics,
+  onToggleMetrics,
 }: BottomToolbarProps) {
   const [hovered, setHovered] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -252,6 +256,22 @@ export function BottomToolbar({
         title="Edit office layout"
       >
         Layout
+      </button>
+      <button
+        onClick={onToggleMetrics}
+        onMouseEnter={() => setHovered('stats')}
+        onMouseLeave={() => setHovered(null)}
+        style={
+          showMetrics
+            ? { ...btnActive }
+            : {
+                ...btnBase,
+                background: hovered === 'stats' ? 'var(--pixel-btn-hover-bg)' : btnBase.background,
+              }
+        }
+        title="Session metrics"
+      >
+        Stats
       </button>
       <div style={{ position: 'relative' }}>
         <button

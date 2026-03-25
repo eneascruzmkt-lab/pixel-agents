@@ -36,6 +36,7 @@ import {
 import { ensureProjectScan } from './fileWatcher.js';
 import type { LayoutWatcher } from './layoutPersistence.js';
 import { readLayoutFromFile, watchLayoutFile, writeLayoutToFile } from './layoutPersistence.js';
+import { MetricsCollector, subscribeMetricsCollector } from './metricsCollector.js';
 import { subscribeNotificationManager } from './notificationManager.js';
 import { type AgentRole, ROLE_COLORS, subscribeRoleDetector } from './roleDetector.js';
 import { subscribeTokenTracker, TokenTracker } from './tokenTracker.js';
@@ -66,6 +67,9 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
 
   // Token usage tracker
   private tokenTracker = new TokenTracker(DEFAULT_CONTEXT_LIMIT);
+
+  // Session metrics collector
+  private metricsCollector = new MetricsCollector();
 
   // Bundled default layout (loaded from assets/default-layout.json)
   defaultLayout: Record<string, unknown> | null = null;
@@ -112,6 +116,9 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
       this.webviewView?.webview.postMessage(msg);
     });
 
+    // Subscribe metrics collector to aggregate session-wide stats
+    subscribeMetricsCollector(this.eventBus, this.metricsCollector);
+
     // Track tool history for inspection panel
     this.eventBus.subscribe('toolStart', (event) => {
       const agent = this.agents.get(event.agentId);
@@ -129,6 +136,7 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
 
     webviewView.webview.onDidReceiveMessage(async (message) => {
       if (message.type === 'openClaude') {
+        const prevSize = this.agents.size;
         await launchNewTerminal(
           this.nextAgentId,
           this.nextTerminalIndex,
@@ -146,6 +154,12 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
           message.folderPath as string | undefined,
           message.bypassPermissions as boolean | undefined,
         );
+        // Track newly created agents in metrics collector
+        if (this.agents.size > prevSize) {
+          for (const id of this.agents.keys()) {
+            this.metricsCollector.addAgent(id);
+          }
+        }
       } else if (message.type === 'focusAgent') {
         const agent = this.agents.get(message.id);
         if (agent) {
@@ -192,6 +206,11 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
           agentId: message.agentId,
           role: role || agent.currentRole,
           color: role ? ROLE_COLORS[role as keyof typeof ROLE_COLORS] : null,
+        });
+      } else if (message.type === 'getMetrics') {
+        webviewView.webview.postMessage({
+          type: 'metricsData',
+          ...this.metricsCollector.getSnapshot(),
         });
       } else if (message.type === 'inspectAgent') {
         const agentId = message.agentId as number;
@@ -475,6 +494,7 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
           if (this.activeAgentId.current === id) {
             this.activeAgentId.current = null;
           }
+          this.metricsCollector.removeAgent(id);
           removeAgent(
             id,
             this.agents,

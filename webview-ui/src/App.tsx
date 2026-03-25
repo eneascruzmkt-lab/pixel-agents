@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { BottomToolbar } from './components/BottomToolbar.js';
 import { DebugView } from './components/DebugView.js';
 import { InspectionPanel } from './components/InspectionPanel.js';
+import { MetricsDashboard } from './components/MetricsDashboard.js';
 import { ZoomControls } from './components/ZoomControls.js';
 import { PULSE_ANIMATION_DURATION_SEC } from './constants.js';
 import { useEditorActions } from './hooks/useEditorActions.js';
@@ -151,6 +152,7 @@ function App() {
     externalAssetDirectories,
     contextLimit,
     inspectData,
+    metricsData,
   } = useExtensionMessages(getOfficeState, editor.setLastSavedLayout, isEditDirty);
 
   // Show migration notice once layout reset is detected
@@ -160,6 +162,7 @@ function App() {
   const [isDebugMode, setIsDebugMode] = useState(false);
   const [alwaysShowOverlay, setAlwaysShowOverlay] = useState(false);
   const [inspectedAgentId, setInspectedAgentId] = useState<number | null>(null);
+  const [showMetrics, setShowMetrics] = useState(false);
 
   const handleToggleDebugMode = useCallback(() => setIsDebugMode((prev) => !prev), []);
   const handleToggleAlwaysShowOverlay = useCallback(
@@ -199,6 +202,8 @@ function App() {
     // Request inspect data for the clicked agent (not in edit mode — edit mode clicks are handled separately)
     vscode.postMessage({ type: 'inspectAgent', agentId: focusId });
     setInspectedAgentId(focusId);
+    // Close metrics dashboard when inspecting an agent (mutually exclusive)
+    setShowMetrics(false);
   }, []);
 
   const officeState = getOfficeState();
@@ -297,6 +302,16 @@ function App() {
         workspaceFolders={workspaceFolders}
         externalAssetDirectories={externalAssetDirectories}
         contextLimit={contextLimit}
+        showMetrics={showMetrics}
+        onToggleMetrics={() => {
+          const next = !showMetrics;
+          setShowMetrics(next);
+          if (next) {
+            // Close inspection panel when opening metrics (mutually exclusive)
+            setInspectedAgentId(null);
+            vscode.postMessage({ type: 'getMetrics' });
+          }
+        }}
       />
 
       {editor.isEditMode && editor.isDirty && (
@@ -376,6 +391,10 @@ function App() {
             setInspectedAgentId(null);
           }}
         />
+      )}
+
+      {showMetrics && metricsData && (
+        <MetricsDashboard data={metricsData} onClose={() => setShowMetrics(false)} />
       )}
 
       {isDebugMode && (

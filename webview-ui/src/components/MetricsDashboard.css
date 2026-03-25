@@ -1,0 +1,96 @@
+.metrics-panel {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 280px;
+  background: #0f0f1e;
+  border-left: 1px solid #2a2a4a;
+  font-family: monospace;
+  font-size: 11px;
+  color: #e0e0e0;
+  overflow-y: auto;
+  z-index: 100;
+}
+.metrics-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid #2a2a4a;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.metrics-title {
+  font-weight: bold;
+  color: #fff;
+}
+.metrics-duration {
+  color: #666;
+  font-size: 9px;
+  margin-left: auto;
+}
+.metrics-close {
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  font-size: 14px;
+  margin-left: 8px;
+}
+.metrics-close:hover {
+  color: #fff;
+}
+.metrics-cards {
+  padding: 10px 16px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  border-bottom: 1px solid #1a1a3a;
+}
+.metrics-card {
+  background: #1a1a2e;
+  border-radius: 4px;
+  padding: 8px;
+  text-align: center;
+}
+.metrics-card-value {
+  font-size: 18px;
+  font-weight: bold;
+}
+.metrics-card-label {
+  color: #666;
+  font-size: 8px;
+  margin-top: 2px;
+}
+.metrics-section {
+  padding: 10px 16px;
+  border-bottom: 1px solid #1a1a3a;
+}
+.metrics-label {
+  color: #666;
+  font-size: 9px;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+.metrics-tool-row {
+  margin-bottom: 6px;
+}
+.metrics-tool-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+.metrics-tool-bar {
+  height: 4px;
+  background: #1a1a2e;
+  border-radius: 2px;
+}
+.metrics-tool-fill {
+  height: 100%;
+  background: #00d2ff;
+  border-radius: 2px;
+}
+.metrics-agent-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}

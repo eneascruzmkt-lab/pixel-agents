@@ -58,6 +58,14 @@ export interface InspectData {
   activeTools: string[];
 }
 
+export interface MetricsData {
+  activeAgents: number;
+  totalTokens: number;
+  toolBreakdown: { tool: string; count: number }[];
+  perAgentTokens: { agentId: number; tokens: number }[];
+  sessionDurationMs: number;
+}
+
 export interface ExtensionMessageState {
   agents: number[];
   selectedAgent: number | null;
@@ -72,6 +80,7 @@ export interface ExtensionMessageState {
   externalAssetDirectories: string[];
   contextLimit: number;
   inspectData: InspectData | null;
+  metricsData: MetricsData | null;
 }
 
 function saveAgentSeats(os: OfficeState): void {
@@ -105,6 +114,7 @@ export function useExtensionMessages(
   const [externalAssetDirectories, setExternalAssetDirectories] = useState<string[]>([]);
   const [contextLimit, setContextLimit] = useState<number>(200000);
   const [inspectData, setInspectData] = useState<InspectData | null>(null);
+  const [metricsData, setMetricsData] = useState<MetricsData | null>(null);
 
   // Track whether initial layout has been loaded (ref to avoid re-render)
   const layoutReadyRef = useRef(false);
@@ -450,6 +460,14 @@ export function useExtensionMessages(
           toolHistory: msg.toolHistory as InspectData['toolHistory'],
           activeTools: msg.activeTools as string[],
         });
+      } else if (msg.type === 'metricsData') {
+        setMetricsData({
+          activeAgents: msg.activeAgents as number,
+          totalTokens: msg.totalTokens as number,
+          toolBreakdown: msg.toolBreakdown as MetricsData['toolBreakdown'],
+          perAgentTokens: msg.perAgentTokens as MetricsData['perAgentTokens'],
+          sessionDurationMs: msg.sessionDurationMs as number,
+        });
       } else if (msg.type === 'furnitureAssetsLoaded') {
         try {
           const catalog = msg.catalog as FurnitureAsset[];
@@ -482,5 +500,6 @@ export function useExtensionMessages(
     externalAssetDirectories,
     contextLimit,
     inspectData,
+    metricsData,
   };
 }
