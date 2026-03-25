@@ -85,6 +85,8 @@ export async function launchNewTerminal(
     isWaiting: false,
     permissionSent: false,
     hadToolsInTurn: false,
+    currentRole: null,
+    manualRoleOverride: null,
     folderName,
   };
 
@@ -241,6 +243,8 @@ export function restoreAgents(
       isWaiting: false,
       permissionSent: false,
       hadToolsInTurn: false,
+      currentRole: null,
+      manualRoleOverride: null,
       folderName: p.folderName,
     };
 

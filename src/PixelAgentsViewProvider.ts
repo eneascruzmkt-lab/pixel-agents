@@ -35,6 +35,7 @@ import {
 import { ensureProjectScan } from './fileWatcher.js';
 import type { LayoutWatcher } from './layoutPersistence.js';
 import { readLayoutFromFile, watchLayoutFile, writeLayoutToFile } from './layoutPersistence.js';
+import { ROLE_COLORS, subscribeRoleDetector } from './roleDetector.js';
 import { TranscriptEventBus } from './transcriptEventBus.js';
 import { setEventBus } from './transcriptParser.js';
 import type { AgentState } from './types.js';
@@ -90,6 +91,11 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
 
     setEventBus(this.eventBus);
 
+    // Subscribe role detector to auto-detect agent roles from tool usage
+    subscribeRoleDetector(this.eventBus, this.agents, (msg) => {
+      this.webviewView?.webview.postMessage(msg);
+    });
+
     webviewView.webview.onDidReceiveMessage(async (message) => {
       if (message.type === 'openClaude') {
         await launchNewTerminal(
@@ -132,6 +138,22 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
         const themeId = message.themeId as string;
         this.context.workspaceState.update(WORKSPACE_KEY_ACTIVE_THEME, themeId);
         this.webviewView?.webview.postMessage({ type: 'themeChanged', themeId });
+      } else if (message.type === 'setAgentRole') {
+        const agent = this.agents.get(message.agentId as number);
+        if (!agent) return;
+        const role = message.role as string;
+        if (role) {
+          agent.manualRoleOverride = role;
+          agent.currentRole = role;
+        } else {
+          agent.manualRoleOverride = null;
+        }
+        this.webviewView?.webview.postMessage({
+          type: 'agentRoleChanged',
+          agentId: message.agentId,
+          role: role || agent.currentRole,
+          color: role ? ROLE_COLORS[role as keyof typeof ROLE_COLORS] : null,
+        });
       } else if (message.type === 'webviewReady') {
         restoreAgents(
           this.context,

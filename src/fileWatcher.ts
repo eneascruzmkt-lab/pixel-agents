@@ -246,6 +246,8 @@ function adoptTerminalForFile(
     isWaiting: false,
     permissionSent: false,
     hadToolsInTurn: false,
+    currentRole: null,
+    manualRoleOverride: null,
   };
 
   agents.set(id, agent);

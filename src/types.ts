@@ -16,6 +16,10 @@ export interface AgentState {
   isWaiting: boolean;
   permissionSent: boolean;
   hadToolsInTurn: boolean;
+  /** Current auto-detected role based on tool usage */
+  currentRole: string | null;
+  /** Manual role override set by user (prevents auto-detection) */
+  manualRoleOverride: string | null;
   /** Workspace folder name (only set for multi-root workspaces) */
   folderName?: string;
 }
