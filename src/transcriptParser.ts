@@ -7,13 +7,6 @@ import {
   TEXT_IDLE_DELAY_MS,
   TOOL_DONE_DELAY_MS,
 } from './constants.js';
-import type { TranscriptEventBus } from './transcriptEventBus.js';
-
-let eventBus: TranscriptEventBus | null = null;
-
-export function setEventBus(bus: TranscriptEventBus): void {
-  eventBus = bus;
-}
 import {
   cancelPermissionTimer,
   cancelWaitingTimer,
@@ -21,7 +14,14 @@ import {
   startPermissionTimer,
   startWaitingTimer,
 } from './timerManager.js';
+import type { TranscriptEventBus } from './transcriptEventBus.js';
 import type { AgentState } from './types.js';
+
+let eventBus: TranscriptEventBus | null = null;
+
+export function setEventBus(bus: TranscriptEventBus): void {
+  eventBus = bus;
+}
 
 export const PERMISSION_EXEMPT_TOOLS = new Set(['Task', 'Agent', 'AskUserQuestion']);
 

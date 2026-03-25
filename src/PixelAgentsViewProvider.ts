@@ -167,11 +167,14 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
           message.folderPath as string | undefined,
           message.bypassPermissions as boolean | undefined,
         );
-        // Track newly created agents in metrics collector
+        // Track newly created agent in metrics collector
         if (this.agents.size > prevSize) {
+          // Find the newly added agent (highest ID)
+          let maxId = 0;
           for (const id of this.agents.keys()) {
-            this.metricsCollector.addAgent(id);
+            if (id > maxId) maxId = id;
           }
+          this.metricsCollector.addAgent(maxId);
         }
       } else if (message.type === 'focusAgent') {
         const agent = this.agents.get(message.id);
