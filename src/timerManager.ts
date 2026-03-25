@@ -1,6 +1,7 @@
 import type * as vscode from 'vscode';
 
 import { PERMISSION_TIMER_DELAY_MS } from './constants.js';
+import type { TranscriptEventBus } from './transcriptEventBus.js';
 import type { AgentState } from './types.js';
 
 export function clearAgentActivity(
@@ -102,6 +103,7 @@ export function startPermissionTimer(
   permissionTimers: Map<number, ReturnType<typeof setTimeout>>,
   permissionExemptTools: Set<string>,
   webview: vscode.Webview | undefined,
+  eventBus?: TranscriptEventBus,
 ): void {
   cancelPermissionTimer(agentId, permissionTimers);
   const timer = setTimeout(() => {
@@ -138,6 +140,16 @@ export function startPermissionTimer(
         type: 'agentToolPermission',
         id: agentId,
       });
+      // Determine the tool name for the event bus
+      let permissionToolName = '';
+      for (const toolId of agent.activeToolIds) {
+        const tn = agent.activeToolNames.get(toolId);
+        if (tn && !permissionExemptTools.has(tn)) {
+          permissionToolName = tn;
+          break;
+        }
+      }
+      eventBus?.emit('permissionNeeded', { agentId, toolName: permissionToolName });
       // Also notify stuck sub-agents
       for (const parentToolId of stuckSubagentParentToolIds) {
         webview?.postMessage({

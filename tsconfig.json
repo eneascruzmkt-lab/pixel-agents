@@ -18,6 +18,8 @@
 		"webview-ui",
 		"dist",
 		"out",
-		"scripts"
+		"scripts",
+		"src/__tests__",
+		"vitest.config.ts"
 	]
 }

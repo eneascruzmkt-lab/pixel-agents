@@ -34,6 +34,8 @@ import {
 import { ensureProjectScan } from './fileWatcher.js';
 import type { LayoutWatcher } from './layoutPersistence.js';
 import { readLayoutFromFile, watchLayoutFile, writeLayoutToFile } from './layoutPersistence.js';
+import { TranscriptEventBus } from './transcriptEventBus.js';
+import { setEventBus } from './transcriptParser.js';
 import type { AgentState } from './types.js';
 
 export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
@@ -53,6 +55,9 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
   activeAgentId = { current: null as number | null };
   knownJsonlFiles = new Set<string>();
   projectScanTimer = { current: null as ReturnType<typeof setInterval> | null };
+
+  // Transcript event bus for feature isolation
+  private eventBus = new TranscriptEventBus();
 
   // Bundled default layout (loaded from assets/default-layout.json)
   defaultLayout: Record<string, unknown> | null = null;
@@ -81,6 +86,8 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
     this.webviewView = webviewView;
     webviewView.webview.options = { enableScripts: true };
     webviewView.webview.html = getWebviewContent(webviewView.webview, this.extensionUri);
+
+    setEventBus(this.eventBus);
 
     webviewView.webview.onDidReceiveMessage(async (message) => {
       if (message.type === 'openClaude') {
@@ -382,6 +389,10 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
         }
       }
     });
+  }
+
+  public getEventBus(): TranscriptEventBus {
+    return this.eventBus;
   }
 
   /** Export current saved layout as a versioned default-layout-{N}.json (dev utility) */

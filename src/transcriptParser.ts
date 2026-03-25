@@ -7,6 +7,13 @@ import {
   TEXT_IDLE_DELAY_MS,
   TOOL_DONE_DELAY_MS,
 } from './constants.js';
+import type { TranscriptEventBus } from './transcriptEventBus.js';
+
+let eventBus: TranscriptEventBus | null = null;
+
+export function setEventBus(bus: TranscriptEventBus): void {
+  eventBus = bus;
+}
 import {
   cancelPermissionTimer,
   cancelWaitingTimer,
@@ -71,6 +78,9 @@ export function processTranscriptLine(
     const record = JSON.parse(line);
 
     if (record.type === 'assistant' && Array.isArray(record.message?.content)) {
+      if (record.message?.usage) {
+        eventBus?.emit('assistantMessage', { agentId, usage: record.message.usage });
+      }
       const blocks = record.message.content as Array<{
         type: string;
         id?: string;
@@ -102,10 +112,24 @@ export function processTranscriptLine(
               toolId: block.id,
               status,
             });
+            eventBus?.emit('toolStart', {
+              agentId,
+              toolName: block.name || '',
+              toolId: block.id,
+              input: block.input || {},
+              status,
+            });
           }
         }
         if (hasNonExemptTool) {
-          startPermissionTimer(agentId, agents, permissionTimers, PERMISSION_EXEMPT_TOOLS, webview);
+          startPermissionTimer(
+            agentId,
+            agents,
+            permissionTimers,
+            PERMISSION_EXEMPT_TOOLS,
+            webview,
+            eventBus ?? undefined,
+          );
         }
       } else if (blocks.some((b) => b.type === 'text') && !agent.hadToolsInTurn) {
         // Text-only response in a turn that hasn't used any tools.
@@ -161,6 +185,11 @@ export function processTranscriptLine(
                   toolId,
                 });
               }, TOOL_DONE_DELAY_MS);
+              eventBus?.emit('toolDone', {
+                agentId,
+                toolId: completedToolId,
+                toolName: completedToolName || '',
+              });
             }
           }
           // All tools completed — allow text-idle timer as fallback
@@ -173,12 +202,16 @@ export function processTranscriptLine(
           cancelWaitingTimer(agentId, waitingTimers);
           clearAgentActivity(agent, agentId, permissionTimers, webview);
           agent.hadToolsInTurn = false;
+          eventBus?.emit('toolsClear', { agentId });
+          eventBus?.emit('userMessage', { agentId });
         }
       } else if (typeof content === 'string' && content.trim()) {
         // New user text prompt — new turn starting
         cancelWaitingTimer(agentId, waitingTimers);
         clearAgentActivity(agent, agentId, permissionTimers, webview);
         agent.hadToolsInTurn = false;
+        eventBus?.emit('toolsClear', { agentId });
+        eventBus?.emit('userMessage', { agentId });
       }
     } else if (record.type === 'queue-operation' && record.operation === 'enqueue') {
       // Background agent completed — parse tool-use-id from XML content
@@ -262,6 +295,8 @@ export function processTranscriptLine(
         id: agentId,
         status: 'waiting',
       });
+      eventBus?.emit('turnEnd', { agentId });
+      eventBus?.emit('agentWaiting', { agentId });
     }
   } catch {
     // Ignore malformed lines
@@ -290,7 +325,14 @@ function processProgressRecord(
   const dataType = data.type as string | undefined;
   if (dataType === 'bash_progress' || dataType === 'mcp_progress') {
     if (agent.activeToolIds.has(parentToolId)) {
-      startPermissionTimer(agentId, agents, permissionTimers, PERMISSION_EXEMPT_TOOLS, webview);
+      startPermissionTimer(
+        agentId,
+        agents,
+        permissionTimers,
+        PERMISSION_EXEMPT_TOOLS,
+        webview,
+        eventBus ?? undefined,
+      );
     }
     return;
   }
@@ -344,10 +386,18 @@ function processProgressRecord(
           toolId: block.id,
           status,
         });
+        eventBus?.emit('subagentToolStart', { agentId, toolName, parentToolId });
       }
     }
     if (hasNonExemptSubTool) {
-      startPermissionTimer(agentId, agents, permissionTimers, PERMISSION_EXEMPT_TOOLS, webview);
+      startPermissionTimer(
+        agentId,
+        agents,
+        permissionTimers,
+        PERMISSION_EXEMPT_TOOLS,
+        webview,
+        eventBus ?? undefined,
+      );
     }
   } else if (msgType === 'user') {
     for (const block of content) {
@@ -362,6 +412,7 @@ function processProgressRecord(
           subTools.delete(block.tool_use_id);
         }
         const subNames = agent.activeSubagentToolNames.get(parentToolId);
+        const subToolName = subNames?.get(block.tool_use_id);
         if (subNames) {
           subNames.delete(block.tool_use_id);
         }
@@ -375,6 +426,7 @@ function processProgressRecord(
             toolId,
           });
         }, 300);
+        eventBus?.emit('subagentToolDone', { agentId, toolName: subToolName || '', parentToolId });
       }
     }
     // If there are still active non-exempt sub-agent tools, restart the permission timer
@@ -390,7 +442,14 @@ function processProgressRecord(
       if (stillHasNonExempt) break;
     }
     if (stillHasNonExempt) {
-      startPermissionTimer(agentId, agents, permissionTimers, PERMISSION_EXEMPT_TOOLS, webview);
+      startPermissionTimer(
+        agentId,
+        agents,
+        permissionTimers,
+        PERMISSION_EXEMPT_TOOLS,
+        webview,
+        eventBus ?? undefined,
+      );
     }
   }
 }
