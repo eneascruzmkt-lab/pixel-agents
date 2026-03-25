@@ -416,6 +416,14 @@ export function useExtensionMessages(
       } else if (msg.type === 'themeChanged') {
         const themeId = msg.themeId as string;
         os.setTheme(themeId);
+      } else if (msg.type === 'agentNotification') {
+        const agentId = msg.agentId as number;
+        const notification = msg.notification as { icon: string; text: string; color: string };
+        os.showNotificationBubble(agentId, notification);
+        // Auto-dismiss after 5 seconds
+        setTimeout(() => {
+          os.dismissNotificationBubble(agentId);
+        }, 5000);
       } else if (msg.type === 'furnitureAssetsLoaded') {
         try {
           const catalog = msg.catalog as FurnitureAsset[];

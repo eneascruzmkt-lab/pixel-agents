@@ -44,6 +44,7 @@ export function SettingsModal({
   const [soundLocal, setSoundLocal] = useState(isSoundEnabled);
   const [themeLocal, setThemeLocal] = useState('default');
   const [contextLimitLocal, setContextLimitLocal] = useState(contextLimit);
+  const [dismissSeconds, setDismissSeconds] = useState(5);
 
   if (!isOpen) return null;
 
@@ -279,6 +280,43 @@ export function SettingsModal({
               fontSize: '18px',
               padding: '2px 4px',
               width: 100,
+              textAlign: 'right',
+            }}
+          />
+        </div>
+        {/* Notification dismiss timer */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            width: '100%',
+            padding: '6px 10px',
+            fontSize: '24px',
+            color: 'rgba(255, 255, 255, 0.8)',
+          }}
+        >
+          <span>Notif Dismiss (s)</span>
+          <input
+            type="number"
+            value={dismissSeconds}
+            min={1}
+            max={30}
+            onChange={(e) => {
+              const val = parseInt(e.target.value, 10);
+              if (!isNaN(val) && val >= 1 && val <= 30) {
+                setDismissSeconds(val);
+                vscode.postMessage({ type: 'setNotificationDismiss', seconds: val });
+              }
+            }}
+            style={{
+              background: 'var(--pixel-bg)',
+              color: 'rgba(255, 255, 255, 0.8)',
+              border: '2px solid var(--pixel-border)',
+              borderRadius: 0,
+              fontSize: '18px',
+              padding: '2px 4px',
+              width: 60,
               textAlign: 'right',
             }}
           />

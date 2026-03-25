@@ -736,13 +736,35 @@ export class OfficeState {
     }
   }
 
+  showNotificationBubble(
+    id: number,
+    notification: { icon: string; text: string; color: string },
+  ): void {
+    const ch = this.characters.get(id);
+    if (ch) {
+      ch.bubbleType = 'notification';
+      ch.bubbleTimer = 0;
+      ch.notificationData = notification;
+    }
+  }
+
+  dismissNotificationBubble(id: number): void {
+    const ch = this.characters.get(id);
+    if (ch && ch.bubbleType === 'notification') {
+      ch.bubbleType = null;
+      ch.bubbleTimer = 0;
+      ch.notificationData = null;
+    }
+  }
+
   /** Dismiss bubble on click — permission: instant, waiting: quick fade */
   dismissBubble(id: number): void {
     const ch = this.characters.get(id);
     if (!ch || !ch.bubbleType) return;
-    if (ch.bubbleType === 'permission') {
+    if (ch.bubbleType === 'permission' || ch.bubbleType === 'notification') {
       ch.bubbleType = null;
       ch.bubbleTimer = 0;
+      ch.notificationData = null;
     } else if (ch.bubbleType === 'waiting') {
       // Trigger immediate fade (0.3s remaining)
       ch.bubbleTimer = Math.min(ch.bubbleTimer, DISMISS_BUBBLE_FAST_FADE_SEC);

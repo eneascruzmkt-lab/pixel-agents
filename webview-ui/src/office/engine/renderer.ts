@@ -627,9 +627,67 @@ export function renderBubbles(
   offsetX: number,
   offsetY: number,
   zoom: number,
+  characterMeta?: Map<number, CharacterMeta>,
 ): void {
   for (const ch of characters) {
     if (!ch.bubbleType) continue;
+
+    // Notification bubbles: render as colored text bubble
+    if (ch.bubbleType === 'notification' && ch.notificationData) {
+      const nd = ch.notificationData;
+      const sittingOff = ch.state === CharacterState.TYPE ? BUBBLE_SITTING_OFFSET_PX : 0;
+      const centerX = Math.round(offsetX + ch.x * zoom);
+      const headY = Math.round(offsetY + (ch.y + sittingOff) * zoom - TILE_SIZE * zoom * 1.5);
+
+      // Stack above health bar and role badge
+      const meta = characterMeta?.get(ch.id);
+      const hasRole = meta?.role && meta.roleColor;
+      const badgeH = hasRole ? Math.round(10 * (zoom / 4)) : 0;
+      const hasToken = meta?.tokenPercentage !== null && meta?.tokenPercentage !== undefined;
+      const tokenH = hasToken ? 16 : 0;
+      const notifY = headY - badgeH - tokenH - 14;
+
+      const displayText = `${nd.icon} ${nd.text}`;
+      const fontSize = Math.max(6, Math.round(6 * (zoom / 4)));
+      ctx.save();
+      ctx.font = `bold ${fontSize}px monospace`;
+      const metrics = ctx.measureText(displayText);
+      const padX = Math.round(3 * (zoom / 4));
+      const padY = Math.round(2 * (zoom / 4));
+      const boxW = metrics.width + padX * 2;
+      const boxH = fontSize + padY * 2;
+      const rx = centerX - boxW / 2;
+      const ry = notifY - boxH;
+
+      // Background
+      ctx.fillStyle = '#1a1a2e';
+      if (ctx.roundRect) {
+        ctx.beginPath();
+        ctx.roundRect(rx, ry, boxW, boxH, 2);
+        ctx.fill();
+      } else {
+        ctx.fillRect(rx, ry, boxW, boxH);
+      }
+
+      // Colored border
+      ctx.strokeStyle = nd.color;
+      ctx.lineWidth = 1;
+      if (ctx.roundRect) {
+        ctx.beginPath();
+        ctx.roundRect(rx, ry, boxW, boxH, 2);
+        ctx.stroke();
+      } else {
+        ctx.strokeRect(rx, ry, boxW, boxH);
+      }
+
+      // Text
+      ctx.fillStyle = nd.color;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(displayText, centerX, ry + boxH / 2);
+      ctx.restore();
+      continue;
+    }
 
     const sprite =
       ch.bubbleType === 'permission' ? BUBBLE_PERMISSION_SPRITE : BUBBLE_WAITING_SPRITE;
@@ -766,7 +824,7 @@ export function renderFrame(
   }
 
   // Speech bubbles (always on top of characters)
-  renderBubbles(ctx, characters, offsetX, offsetY, zoom);
+  renderBubbles(ctx, characters, offsetX, offsetY, zoom, characterMeta);
 
   // Editor overlays
   if (editor) {

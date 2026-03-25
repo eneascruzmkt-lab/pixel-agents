@@ -20,6 +20,9 @@ export const LAYOUT_REVISION_KEY = 'layoutRevision';
 // ── Settings Persistence ────────────────────────────────────
 export const GLOBAL_KEY_SOUND_ENABLED = 'pixel-agents.soundEnabled';
 
+// ── Notification Bubbles ─────────────────────────────────────
+export const NOTIFICATION_DISMISS_MS = 5000;
+
 // ── Token Tracking ───────────────────────────────────────────
 export const DEFAULT_CONTEXT_LIMIT = 200000;
 export const TOKEN_STALENESS_MS = 60000;

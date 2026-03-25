@@ -36,6 +36,7 @@ import {
 import { ensureProjectScan } from './fileWatcher.js';
 import type { LayoutWatcher } from './layoutPersistence.js';
 import { readLayoutFromFile, watchLayoutFile, writeLayoutToFile } from './layoutPersistence.js';
+import { subscribeNotificationManager } from './notificationManager.js';
 import { ROLE_COLORS, subscribeRoleDetector } from './roleDetector.js';
 import { subscribeTokenTracker, TokenTracker } from './tokenTracker.js';
 import { TranscriptEventBus } from './transcriptEventBus.js';
@@ -106,6 +107,11 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
       this.webviewView?.webview.postMessage(msg);
     });
 
+    // Subscribe notification manager to forward colored notifications to webview
+    subscribeNotificationManager(this.eventBus, (msg) => {
+      this.webviewView?.webview.postMessage(msg);
+    });
+
     webviewView.webview.onDidReceiveMessage(async (message) => {
       if (message.type === 'openClaude') {
         await launchNewTerminal(
@@ -148,6 +154,11 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
         const themeId = message.themeId as string;
         this.context.workspaceState.update(WORKSPACE_KEY_ACTIVE_THEME, themeId);
         this.webviewView?.webview.postMessage({ type: 'themeChanged', themeId });
+      } else if (message.type === 'setNotificationDismiss') {
+        this.context.workspaceState.update(
+          'pixelAgents.notificationDismissMs',
+          (message.seconds as number) * 1000,
+        );
       } else if (message.type === 'setContextLimit') {
         this.tokenTracker.setContextLimit(message.limit as number);
         this.context.workspaceState.update('pixelAgents.contextLimit', message.limit);
