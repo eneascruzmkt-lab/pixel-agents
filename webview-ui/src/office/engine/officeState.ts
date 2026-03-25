@@ -49,6 +49,9 @@ export class OfficeState {
   cameraFollowId: number | null = null;
   hoveredAgentId: number | null = null;
   hoveredTile: { col: number; row: number } | null = null;
+  /** Per-character role metadata for role badge rendering */
+  characterMeta = new Map<number, { role: string | null; roleColor: string | null }>();
+
   /** Maps "parentId:toolId" → sub-agent character ID (negative) */
   subagentIdMap: Map<string, number> = new Map();
   /** Reverse lookup: sub-agent character ID → parent info */
@@ -67,6 +70,13 @@ export class OfficeState {
     this.blockedTiles = getBlockedTiles(this.layout.furniture);
     this.furniture = layoutToFurnitureInstances(this.layout.furniture);
     this.walkableTiles = getWalkableTiles(this.tileMap, this.blockedTiles);
+  }
+
+  setAgentRole(agentId: number, role: string, color: string): void {
+    const meta = this.characterMeta.get(agentId) ?? { role: null, roleColor: null };
+    meta.role = role;
+    meta.roleColor = color;
+    this.characterMeta.set(agentId, meta);
   }
 
   setTheme(themeId: string): void {

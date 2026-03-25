@@ -490,6 +490,54 @@ export function renderRotateButton(
   return { cx, cy, radius };
 }
 
+// ── Role badges ─────────────────────────────────────────────────
+
+export function renderRoleBadges(
+  ctx: CanvasRenderingContext2D,
+  characters: Character[],
+  characterMeta: Map<number, { role: string | null; roleColor: string | null }>,
+  offsetX: number,
+  offsetY: number,
+  zoom: number,
+): void {
+  for (const ch of characters) {
+    if (ch.matrixEffect) continue;
+    const meta = characterMeta.get(ch.id);
+    if (!meta?.role || !meta.roleColor) continue;
+
+    const text = meta.role;
+    const fontSize = Math.max(7, Math.round(7 * (zoom / 4)));
+    ctx.font = `bold ${fontSize}px monospace`;
+    const metrics = ctx.measureText(text);
+    const padX = Math.round(3 * (zoom / 4));
+    const h = Math.round(10 * (zoom / 4));
+    const w = metrics.width + padX * 2;
+
+    // Position: centered above the character's head, above where bubbles go
+    const sittingOff = ch.state === CharacterState.TYPE ? CHARACTER_SITTING_OFFSET_PX : 0;
+    const centerX = Math.round(offsetX + ch.x * zoom);
+    const headY = Math.round(offsetY + (ch.y + sittingOff) * zoom - TILE_SIZE * zoom * 1.5);
+    const rx = centerX - w / 2;
+    const ry = headY - h;
+
+    ctx.save();
+    ctx.fillStyle = meta.roleColor;
+    ctx.beginPath();
+    if (ctx.roundRect) {
+      ctx.roundRect(rx, ry, w, h, 2);
+    } else {
+      ctx.rect(rx, ry, w, h);
+    }
+    ctx.fill();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, centerX, ry + h / 2);
+    ctx.restore();
+  }
+}
+
 // ── Speech bubbles ──────────────────────────────────────────────
 
 export function renderBubbles(
@@ -589,6 +637,7 @@ export function renderFrame(
   layoutCols?: number,
   layoutRows?: number,
   palette?: ThemePalette | null,
+  characterMeta?: Map<number, { role: string | null; roleColor: string | null }>,
 ): { offsetX: number; offsetY: number } {
   // Clear
   ctx.clearRect(0, 0, canvasWidth, canvasHeight);
@@ -628,6 +677,11 @@ export function renderFrame(
   const selectedId = selection?.selectedAgentId ?? null;
   const hoveredId = selection?.hoveredAgentId ?? null;
   renderScene(ctx, allFurniture, characters, offsetX, offsetY, zoom, selectedId, hoveredId);
+
+  // Role badges (above characters, below bubbles)
+  if (characterMeta && characterMeta.size > 0) {
+    renderRoleBadges(ctx, characters, characterMeta, offsetX, offsetY, zoom);
+  }
 
   // Speech bubbles (always on top of characters)
   renderBubbles(ctx, characters, offsetX, offsetY, zoom);

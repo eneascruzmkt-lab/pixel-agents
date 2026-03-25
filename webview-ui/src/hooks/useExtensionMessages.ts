@@ -364,6 +364,13 @@ export function useExtensionMessages(
         setSubagentCharacters((prev) =>
           prev.filter((s) => !(s.parentAgentId === id && s.parentToolId === parentToolId)),
         );
+      } else if (msg.type === 'agentRoleChanged') {
+        const agentId = msg.agentId as number;
+        const role = msg.role as string;
+        const color = msg.color as string;
+        if (role && color) {
+          os.setAgentRole(agentId, role, color);
+        }
       } else if (msg.type === 'characterSpritesLoaded') {
         const characters = msg.characters as Array<{
           down: string[][][];
