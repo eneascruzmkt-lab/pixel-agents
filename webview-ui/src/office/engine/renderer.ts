@@ -62,7 +62,6 @@ export function renderTileGrid(
   zoom: number,
   tileColors?: Array<FloorColor | null>,
   cols?: number,
-  palette?: ThemePalette | null,
 ): void {
   const s = TILE_SIZE * zoom;
   const useSpriteFloors = hasFloorSprites();
@@ -81,23 +80,12 @@ export function renderTileGrid(
       if (tile === TileType.WALL || !useSpriteFloors) {
         // Wall tiles or fallback: solid color
         if (tile === TileType.WALL) {
-          if (palette) {
-            ctx.fillStyle = palette.wall;
-          } else {
-            const colorIdx = r * layoutCols + c;
-            const wallColor = tileColors?.[colorIdx];
-            ctx.fillStyle = wallColor ? wallColorToHex(wallColor) : WALL_COLOR;
-          }
+          const colorIdx = r * layoutCols + c;
+          const wallColor = tileColors?.[colorIdx];
+          ctx.fillStyle = wallColor ? wallColorToHex(wallColor) : WALL_COLOR;
         } else {
-          ctx.fillStyle = palette ? palette.floor : FALLBACK_FLOOR_COLOR;
+          ctx.fillStyle = FALLBACK_FLOOR_COLOR;
         }
-        ctx.fillRect(offsetX + c * s, offsetY + r * s, s, s);
-        continue;
-      }
-
-      // Theme palette override: use flat floor color instead of sprite
-      if (palette) {
-        ctx.fillStyle = palette.floor;
         ctx.fillRect(offsetX + c * s, offsetY + r * s, s, s);
         continue;
       }
@@ -778,8 +766,14 @@ export function renderFrame(
   palette?: ThemePalette | null,
   characterMeta?: Map<number, CharacterMeta>,
 ): { offsetX: number; offsetY: number } {
-  // Clear
-  ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+  // Clear — if a theme palette is active, fill background with theme color;
+  // otherwise just clear to transparent (default VS Code webview background).
+  if (palette) {
+    ctx.fillStyle = palette.floor;
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+  } else {
+    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+  }
 
   // Use layout dimensions (fallback to tileMap size)
   const cols = layoutCols ?? (tileMap.length > 0 ? tileMap[0].length : 0);
@@ -791,8 +785,8 @@ export function renderFrame(
   const offsetX = Math.floor((canvasWidth - mapW) / 2) + Math.round(panX);
   const offsetY = Math.floor((canvasHeight - mapH) / 2) + Math.round(panY);
 
-  // Draw tiles (floor + wall base color)
-  renderTileGrid(ctx, tileMap, offsetX, offsetY, zoom, tileColors, layoutCols, palette);
+  // Draw tiles (floor + wall base color) — themes do NOT affect tile rendering
+  renderTileGrid(ctx, tileMap, offsetX, offsetY, zoom, tileColors, layoutCols);
 
   // Seat indicators (below furniture/characters, on top of floor)
   if (selection) {
