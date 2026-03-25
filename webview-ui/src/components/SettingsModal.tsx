@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { isSoundEnabled, setSoundEnabled } from '../notificationSound.js';
+import { THEMES } from '../office/themes/themeDefinitions.js';
 import { vscode } from '../vscodeApi.js';
 
 interface SettingsModalProps {
@@ -39,6 +40,7 @@ export function SettingsModal({
 }: SettingsModalProps) {
   const [hovered, setHovered] = useState<string | null>(null);
   const [soundLocal, setSoundLocal] = useState(isSoundEnabled);
+  const [themeLocal, setThemeLocal] = useState('default');
 
   if (!isOpen) return null;
 
@@ -205,6 +207,44 @@ export function SettingsModal({
             </button>
           </div>
         ))}
+        {/* Theme selector */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            width: '100%',
+            padding: '6px 10px',
+            fontSize: '24px',
+            color: 'rgba(255, 255, 255, 0.8)',
+          }}
+        >
+          <span>Theme</span>
+          <select
+            value={themeLocal}
+            onChange={(e) => {
+              const themeId = e.target.value;
+              setThemeLocal(themeId);
+              vscode.postMessage({ type: 'setTheme', themeId });
+            }}
+            style={{
+              background: 'var(--pixel-bg)',
+              color: 'rgba(255, 255, 255, 0.8)',
+              border: '2px solid var(--pixel-border)',
+              borderRadius: 0,
+              fontSize: '18px',
+              padding: '2px 4px',
+              cursor: 'pointer',
+            }}
+          >
+            <option value="default">Default Office</option>
+            {THEMES.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+        </div>
         <button
           onClick={() => {
             const newVal = !isSoundEnabled();

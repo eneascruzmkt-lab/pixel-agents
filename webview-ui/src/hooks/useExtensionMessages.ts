@@ -393,6 +393,9 @@ export function useExtensionMessages(
         if (Array.isArray(msg.dirs)) {
           setExternalAssetDirectories(msg.dirs as string[]);
         }
+      } else if (msg.type === 'themeChanged') {
+        const themeId = msg.themeId as string;
+        os.setTheme(themeId);
       } else if (msg.type === 'furnitureAssetsLoaded') {
         try {
           const catalog = msg.catalog as FurnitureAsset[];

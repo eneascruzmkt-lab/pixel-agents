@@ -29,6 +29,7 @@ import { readConfig, writeConfig } from './configPersistence.js';
 import {
   GLOBAL_KEY_SOUND_ENABLED,
   LAYOUT_REVISION_KEY,
+  WORKSPACE_KEY_ACTIVE_THEME,
   WORKSPACE_KEY_AGENT_SEATS,
 } from './constants.js';
 import { ensureProjectScan } from './fileWatcher.js';
@@ -127,6 +128,10 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
         writeLayoutToFile(message.layout as Record<string, unknown>);
       } else if (message.type === 'setSoundEnabled') {
         this.context.globalState.update(GLOBAL_KEY_SOUND_ENABLED, message.enabled);
+      } else if (message.type === 'setTheme') {
+        const themeId = message.themeId as string;
+        this.context.workspaceState.update(WORKSPACE_KEY_ACTIVE_THEME, themeId);
+        this.webviewView?.webview.postMessage({ type: 'themeChanged', themeId });
       } else if (message.type === 'webviewReady') {
         restoreAgents(
           this.context,
@@ -152,6 +157,13 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
           soundEnabled,
           externalAssetDirectories: config.externalAssetDirectories,
         });
+
+        // Restore active theme
+        const activeTheme = this.context.workspaceState.get<string>(
+          WORKSPACE_KEY_ACTIVE_THEME,
+          'default',
+        );
+        this.webview?.postMessage({ type: 'themeChanged', themeId: activeTheme });
 
         // Send workspace folders to webview (only when multi-root)
         const wsFolders = vscode.workspace.workspaceFolders;

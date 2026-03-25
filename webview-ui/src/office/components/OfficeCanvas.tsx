@@ -267,6 +267,7 @@ export function OfficeCanvas({
           officeState.getLayout().tileColors,
           officeState.getLayout().cols,
           officeState.getLayout().rows,
+          officeState.activePalette,
         );
         offsetRef.current = { x: offsetX, y: offsetY };
 

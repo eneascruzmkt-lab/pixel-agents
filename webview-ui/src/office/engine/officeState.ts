@@ -22,6 +22,7 @@ import {
   layoutToTileMap,
 } from '../layout/layoutSerializer.js';
 import { findPath, getWalkableTiles, isWalkable } from '../layout/tileMap.js';
+import { getThemePalette, type ThemePalette } from '../themes/themeDefinitions.js';
 import type {
   Character,
   FurnitureInstance,
@@ -54,6 +55,11 @@ export class OfficeState {
   subagentMeta: Map<number, { parentAgentId: number; parentToolId: string }> = new Map();
   private nextSubagentId = -1;
 
+  /** Active theme ID ('default' = no palette override) */
+  activeThemeId: string = 'default';
+  /** Resolved palette for the active theme, or null for default */
+  activePalette: ThemePalette | null = null;
+
   constructor(layout?: OfficeLayout) {
     this.layout = layout || createDefaultLayout();
     this.tileMap = layoutToTileMap(this.layout);
@@ -61,6 +67,11 @@ export class OfficeState {
     this.blockedTiles = getBlockedTiles(this.layout.furniture);
     this.furniture = layoutToFurnitureInstances(this.layout.furniture);
     this.walkableTiles = getWalkableTiles(this.tileMap, this.blockedTiles);
+  }
+
+  setTheme(themeId: string): void {
+    this.activeThemeId = themeId;
+    this.activePalette = getThemePalette(themeId);
   }
 
   /** Rebuild all derived state from a new layout. Reassigns existing characters.

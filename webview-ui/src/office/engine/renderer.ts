@@ -38,6 +38,7 @@ import {
   BUBBLE_WAITING_SPRITE,
   getCharacterSprites,
 } from '../sprites/spriteData.js';
+import type { ThemePalette } from '../themes/themeDefinitions.js';
 import type {
   Character,
   FloorColor,
@@ -61,6 +62,7 @@ export function renderTileGrid(
   zoom: number,
   tileColors?: Array<FloorColor | null>,
   cols?: number,
+  palette?: ThemePalette | null,
 ): void {
   const s = TILE_SIZE * zoom;
   const useSpriteFloors = hasFloorSprites();
@@ -79,12 +81,23 @@ export function renderTileGrid(
       if (tile === TileType.WALL || !useSpriteFloors) {
         // Wall tiles or fallback: solid color
         if (tile === TileType.WALL) {
-          const colorIdx = r * layoutCols + c;
-          const wallColor = tileColors?.[colorIdx];
-          ctx.fillStyle = wallColor ? wallColorToHex(wallColor) : WALL_COLOR;
+          if (palette) {
+            ctx.fillStyle = palette.wall;
+          } else {
+            const colorIdx = r * layoutCols + c;
+            const wallColor = tileColors?.[colorIdx];
+            ctx.fillStyle = wallColor ? wallColorToHex(wallColor) : WALL_COLOR;
+          }
         } else {
-          ctx.fillStyle = FALLBACK_FLOOR_COLOR;
+          ctx.fillStyle = palette ? palette.floor : FALLBACK_FLOOR_COLOR;
         }
+        ctx.fillRect(offsetX + c * s, offsetY + r * s, s, s);
+        continue;
+      }
+
+      // Theme palette override: use flat floor color instead of sprite
+      if (palette) {
+        ctx.fillStyle = palette.floor;
         ctx.fillRect(offsetX + c * s, offsetY + r * s, s, s);
         continue;
       }
@@ -575,6 +588,7 @@ export function renderFrame(
   tileColors?: Array<FloorColor | null>,
   layoutCols?: number,
   layoutRows?: number,
+  palette?: ThemePalette | null,
 ): { offsetX: number; offsetY: number } {
   // Clear
   ctx.clearRect(0, 0, canvasWidth, canvasHeight);
@@ -590,7 +604,7 @@ export function renderFrame(
   const offsetY = Math.floor((canvasHeight - mapH) / 2) + Math.round(panY);
 
   // Draw tiles (floor + wall base color)
-  renderTileGrid(ctx, tileMap, offsetX, offsetY, zoom, tileColors, layoutCols);
+  renderTileGrid(ctx, tileMap, offsetX, offsetY, zoom, tileColors, layoutCols, palette);
 
   // Seat indicators (below furniture/characters, on top of floor)
   if (selection) {
