@@ -20,6 +20,10 @@ export const LAYOUT_REVISION_KEY = 'layoutRevision';
 // ── Settings Persistence ────────────────────────────────────
 export const GLOBAL_KEY_SOUND_ENABLED = 'pixel-agents.soundEnabled';
 
+// ── Token Tracking ───────────────────────────────────────────
+export const DEFAULT_CONTEXT_LIMIT = 200000;
+export const TOKEN_STALENESS_MS = 60000;
+
 // ── VS Code Identifiers ─────────────────────────────────────
 export const VIEW_ID = 'pixel-agents.panelView';
 export const COMMAND_SHOW_PANEL = 'pixel-agents.showPanel';
