@@ -148,6 +148,7 @@ function App() {
     loadedAssets,
     workspaceFolders,
     externalAssetDirectories,
+    contextLimit,
   } = useExtensionMessages(getOfficeState, editor.setLastSavedLayout, isEditDirty);
 
   // Show migration notice once layout reset is detected
@@ -289,6 +290,7 @@ function App() {
         onToggleAlwaysShowOverlay={handleToggleAlwaysShowOverlay}
         workspaceFolders={workspaceFolders}
         externalAssetDirectories={externalAssetDirectories}
+        contextLimit={contextLimit}
       />
 
       {editor.isEditMode && editor.isDirty && (

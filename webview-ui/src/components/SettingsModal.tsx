@@ -12,6 +12,7 @@ interface SettingsModalProps {
   alwaysShowOverlay: boolean;
   onToggleAlwaysShowOverlay: () => void;
   externalAssetDirectories: string[];
+  contextLimit: number;
 }
 
 const menuItemBase: React.CSSProperties = {
@@ -37,10 +38,12 @@ export function SettingsModal({
   alwaysShowOverlay,
   onToggleAlwaysShowOverlay,
   externalAssetDirectories,
+  contextLimit,
 }: SettingsModalProps) {
   const [hovered, setHovered] = useState<string | null>(null);
   const [soundLocal, setSoundLocal] = useState(isSoundEnabled);
   const [themeLocal, setThemeLocal] = useState('default');
+  const [contextLimitLocal, setContextLimitLocal] = useState(contextLimit);
 
   if (!isOpen) return null;
 
@@ -244,6 +247,41 @@ export function SettingsModal({
               </option>
             ))}
           </select>
+        </div>
+        {/* Context limit */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            width: '100%',
+            padding: '6px 10px',
+            fontSize: '24px',
+            color: 'rgba(255, 255, 255, 0.8)',
+          }}
+        >
+          <span>Context Limit</span>
+          <input
+            type="number"
+            value={contextLimitLocal}
+            onChange={(e) => {
+              const val = parseInt(e.target.value, 10);
+              if (!isNaN(val) && val > 0) {
+                setContextLimitLocal(val);
+                vscode.postMessage({ type: 'setContextLimit', limit: val });
+              }
+            }}
+            style={{
+              background: 'var(--pixel-bg)',
+              color: 'rgba(255, 255, 255, 0.8)',
+              border: '2px solid var(--pixel-border)',
+              borderRadius: 0,
+              fontSize: '18px',
+              padding: '2px 4px',
+              width: 100,
+              textAlign: 'right',
+            }}
+          />
         </div>
         <button
           onClick={() => {

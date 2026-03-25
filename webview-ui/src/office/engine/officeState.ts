@@ -49,8 +49,19 @@ export class OfficeState {
   cameraFollowId: number | null = null;
   hoveredAgentId: number | null = null;
   hoveredTile: { col: number; row: number } | null = null;
-  /** Per-character role metadata for role badge rendering */
-  characterMeta = new Map<number, { role: string | null; roleColor: string | null }>();
+  /** Per-character role + token metadata for badge and health bar rendering */
+  characterMeta = new Map<
+    number,
+    {
+      role: string | null;
+      roleColor: string | null;
+      tokenPercentage: number | null;
+      tokenColor: string | null;
+      tokenUsed: number | null;
+      tokenLimit: number | null;
+      tokenStale: boolean;
+    }
+  >();
 
   /** Maps "parentId:toolId" → sub-agent character ID (negative) */
   subagentIdMap: Map<string, number> = new Map();
@@ -73,10 +84,43 @@ export class OfficeState {
   }
 
   setAgentRole(agentId: number, role: string, color: string): void {
-    const meta = this.characterMeta.get(agentId) ?? { role: null, roleColor: null };
+    const meta = this.characterMeta.get(agentId) ?? {
+      role: null,
+      roleColor: null,
+      tokenPercentage: null,
+      tokenColor: null,
+      tokenUsed: null,
+      tokenLimit: null,
+      tokenStale: false,
+    };
     meta.role = role;
     meta.roleColor = color;
     this.characterMeta.set(agentId, meta);
+  }
+
+  setAgentTokens(
+    agentId: number,
+    pct: number,
+    color: string,
+    used: number,
+    limit: number,
+    stale: boolean,
+  ): void {
+    const existing = this.characterMeta.get(agentId) ?? {
+      role: null,
+      roleColor: null,
+      tokenPercentage: null,
+      tokenColor: null,
+      tokenUsed: null,
+      tokenLimit: null,
+      tokenStale: false,
+    };
+    existing.tokenPercentage = pct;
+    existing.tokenColor = color;
+    existing.tokenUsed = used;
+    existing.tokenLimit = limit;
+    existing.tokenStale = stale;
+    this.characterMeta.set(agentId, existing);
   }
 
   setTheme(themeId: string): void {

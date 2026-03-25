@@ -490,12 +490,93 @@ export function renderRotateButton(
   return { cx, cy, radius };
 }
 
+// ── Character meta type ──────────────────────────────────────────
+
+export interface CharacterMeta {
+  role: string | null;
+  roleColor: string | null;
+  tokenPercentage: number | null;
+  tokenColor: string | null;
+  tokenUsed: number | null;
+  tokenLimit: number | null;
+  tokenStale: boolean;
+}
+
+// ── Health bars ─────────────────────────────────────────────────
+
+export function renderHealthBar(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  percentage: number,
+  color: string,
+  stale: boolean,
+): void {
+  const barWidth = 40;
+  const barHeight = 4;
+  const rx = x - barWidth / 2;
+
+  // Background
+  ctx.fillStyle = '#1a1a2e';
+  ctx.fillRect(rx, y, barWidth, barHeight);
+
+  // Border
+  ctx.strokeStyle = '#333';
+  ctx.lineWidth = 0.5;
+  ctx.strokeRect(rx, y, barWidth, barHeight);
+
+  // Fill (flash when < 15%)
+  const flash = percentage < 15 && Math.floor(Date.now() / 300) % 2 === 0;
+  if (!flash) {
+    const fillWidth = (percentage / 100) * barWidth;
+    ctx.fillStyle = color;
+    ctx.fillRect(rx, y, fillWidth, barHeight);
+  }
+
+  // Percentage text or "?" if stale
+  ctx.font = '6px monospace';
+  ctx.fillStyle = percentage < 30 ? '#ff4444' : '#888';
+  ctx.textAlign = 'center';
+  if (stale) {
+    ctx.fillText('?', x, y + barHeight + 7);
+  } else {
+    ctx.fillText(`${percentage}%`, x, y + barHeight + 7);
+  }
+}
+
+export function renderHealthBars(
+  ctx: CanvasRenderingContext2D,
+  characters: Character[],
+  characterMeta: Map<number, CharacterMeta>,
+  offsetX: number,
+  offsetY: number,
+  zoom: number,
+): void {
+  for (const ch of characters) {
+    if (ch.matrixEffect) continue;
+    const meta = characterMeta.get(ch.id);
+    if (meta?.tokenPercentage === null || meta?.tokenPercentage === undefined) continue;
+    if (!meta.tokenColor) continue;
+
+    const sittingOff = ch.state === CharacterState.TYPE ? CHARACTER_SITTING_OFFSET_PX : 0;
+    const centerX = Math.round(offsetX + ch.x * zoom);
+    const headY = Math.round(offsetY + (ch.y + sittingOff) * zoom - TILE_SIZE * zoom * 1.5);
+
+    // Health bar renders above role badge
+    const hasRole = meta.role && meta.roleColor;
+    const badgeH = hasRole ? Math.round(10 * (zoom / 4)) : 0;
+    const barY = headY - badgeH - 12;
+
+    renderHealthBar(ctx, centerX, barY, meta.tokenPercentage, meta.tokenColor, meta.tokenStale);
+  }
+}
+
 // ── Role badges ─────────────────────────────────────────────────
 
 export function renderRoleBadges(
   ctx: CanvasRenderingContext2D,
   characters: Character[],
-  characterMeta: Map<number, { role: string | null; roleColor: string | null }>,
+  characterMeta: Map<number, CharacterMeta>,
   offsetX: number,
   offsetY: number,
   zoom: number,
@@ -637,7 +718,7 @@ export function renderFrame(
   layoutCols?: number,
   layoutRows?: number,
   palette?: ThemePalette | null,
-  characterMeta?: Map<number, { role: string | null; roleColor: string | null }>,
+  characterMeta?: Map<number, CharacterMeta>,
 ): { offsetX: number; offsetY: number } {
   // Clear
   ctx.clearRect(0, 0, canvasWidth, canvasHeight);
@@ -678,9 +759,10 @@ export function renderFrame(
   const hoveredId = selection?.hoveredAgentId ?? null;
   renderScene(ctx, allFurniture, characters, offsetX, offsetY, zoom, selectedId, hoveredId);
 
-  // Role badges (above characters, below bubbles)
+  // Role badges (above characters, below health bars)
   if (characterMeta && characterMeta.size > 0) {
     renderRoleBadges(ctx, characters, characterMeta, offsetX, offsetY, zoom);
+    renderHealthBars(ctx, characters, characterMeta, offsetX, offsetY, zoom);
   }
 
   // Speech bubbles (always on top of characters)

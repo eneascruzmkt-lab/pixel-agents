@@ -58,6 +58,7 @@ export interface ExtensionMessageState {
   loadedAssets?: { catalog: FurnitureAsset[]; sprites: Record<string, string[][]> };
   workspaceFolders: WorkspaceFolder[];
   externalAssetDirectories: string[];
+  contextLimit: number;
 }
 
 function saveAgentSeats(os: OfficeState): void {
@@ -89,6 +90,7 @@ export function useExtensionMessages(
   >();
   const [workspaceFolders, setWorkspaceFolders] = useState<WorkspaceFolder[]>([]);
   const [externalAssetDirectories, setExternalAssetDirectories] = useState<string[]>([]);
+  const [contextLimit, setContextLimit] = useState<number>(200000);
 
   // Track whether initial layout has been loaded (ref to avoid re-render)
   const layoutReadyRef = useRef(false);
@@ -364,6 +366,14 @@ export function useExtensionMessages(
         setSubagentCharacters((prev) =>
           prev.filter((s) => !(s.parentAgentId === id && s.parentToolId === parentToolId)),
         );
+      } else if (msg.type === 'agentTokenUpdate') {
+        const agentId = msg.agentId as number;
+        const pct = msg.percentage as number;
+        const color = msg.color as string;
+        const used = msg.used as number;
+        const limit = msg.limit as number;
+        const stale = msg.stale as boolean;
+        os.setAgentTokens(agentId, pct, color, used, limit, stale);
       } else if (msg.type === 'agentRoleChanged') {
         const agentId = msg.agentId as number;
         const role = msg.role as string;
@@ -395,6 +405,9 @@ export function useExtensionMessages(
         setSoundEnabled(soundOn);
         if (Array.isArray(msg.externalAssetDirectories)) {
           setExternalAssetDirectories(msg.externalAssetDirectories as string[]);
+        }
+        if (typeof msg.contextLimit === 'number') {
+          setContextLimit(msg.contextLimit as number);
         }
       } else if (msg.type === 'externalAssetDirectoriesUpdated') {
         if (Array.isArray(msg.dirs)) {
@@ -433,5 +446,6 @@ export function useExtensionMessages(
     loadedAssets,
     workspaceFolders,
     externalAssetDirectories,
+    contextLimit,
   };
 }

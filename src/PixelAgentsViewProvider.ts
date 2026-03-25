@@ -27,6 +27,7 @@ import {
 } from './assetLoader.js';
 import { readConfig, writeConfig } from './configPersistence.js';
 import {
+  DEFAULT_CONTEXT_LIMIT,
   GLOBAL_KEY_SOUND_ENABLED,
   LAYOUT_REVISION_KEY,
   WORKSPACE_KEY_ACTIVE_THEME,
@@ -36,6 +37,7 @@ import { ensureProjectScan } from './fileWatcher.js';
 import type { LayoutWatcher } from './layoutPersistence.js';
 import { readLayoutFromFile, watchLayoutFile, writeLayoutToFile } from './layoutPersistence.js';
 import { ROLE_COLORS, subscribeRoleDetector } from './roleDetector.js';
+import { subscribeTokenTracker, TokenTracker } from './tokenTracker.js';
 import { TranscriptEventBus } from './transcriptEventBus.js';
 import { setEventBus } from './transcriptParser.js';
 import type { AgentState } from './types.js';
@@ -60,6 +62,9 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
 
   // Transcript event bus for feature isolation
   private eventBus = new TranscriptEventBus();
+
+  // Token usage tracker
+  private tokenTracker = new TokenTracker(DEFAULT_CONTEXT_LIMIT);
 
   // Bundled default layout (loaded from assets/default-layout.json)
   defaultLayout: Record<string, unknown> | null = null;
@@ -93,6 +98,11 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
 
     // Subscribe role detector to auto-detect agent roles from tool usage
     subscribeRoleDetector(this.eventBus, this.agents, (msg) => {
+      this.webviewView?.webview.postMessage(msg);
+    });
+
+    // Subscribe token tracker to forward usage updates to webview
+    subscribeTokenTracker(this.eventBus, this.tokenTracker, (msg) => {
       this.webviewView?.webview.postMessage(msg);
     });
 
@@ -138,6 +148,9 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
         const themeId = message.themeId as string;
         this.context.workspaceState.update(WORKSPACE_KEY_ACTIVE_THEME, themeId);
         this.webviewView?.webview.postMessage({ type: 'themeChanged', themeId });
+      } else if (message.type === 'setContextLimit') {
+        this.tokenTracker.setContextLimit(message.limit as number);
+        this.context.workspaceState.update('pixelAgents.contextLimit', message.limit);
       } else if (message.type === 'setAgentRole') {
         const agent = this.agents.get(message.agentId as number);
         if (!agent) return;
@@ -171,6 +184,13 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
           this.webview,
           this.persistAgents,
         );
+        // Restore context limit for token tracker
+        const contextLimit = this.context.workspaceState.get<number>(
+          'pixelAgents.contextLimit',
+          DEFAULT_CONTEXT_LIMIT,
+        );
+        this.tokenTracker.setContextLimit(contextLimit);
+
         // Send persisted settings to webview
         const soundEnabled = this.context.globalState.get<boolean>(GLOBAL_KEY_SOUND_ENABLED, true);
         const config = readConfig();
@@ -178,6 +198,7 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
           type: 'settingsLoaded',
           soundEnabled,
           externalAssetDirectories: config.externalAssetDirectories,
+          contextLimit,
         });
 
         // Restore active theme
