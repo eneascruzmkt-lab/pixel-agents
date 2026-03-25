@@ -63,6 +63,8 @@
     "lint:fix": "eslint src --fix",
     "lint:webview": "cd webview-ui && npm run lint",
     "lint:webview:fix": "cd webview-ui && eslint . --fix",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "import-tileset": "tsx scripts/import-tileset-cli.ts",
     "format": "prettier --write \"src/**/*.ts\" \"webview-ui/src/**/*.{ts,tsx,css}\" \"*.{js,mjs}\" \"webview-ui/*.{js,ts}\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"webview-ui/src/**/*.{ts,tsx,css}\" \"*.{js,mjs}\" \"webview-ui/*.{js,ts}\"",
@@ -87,7 +89,8 @@
     "prettier": "^3.8.1",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.54.0"
+    "typescript-eslint": "^8.54.0",
+    "vitest": "^4.1.1"
   },
   "lint-staged": {
     "src/**/*.ts": "eslint --fix",
