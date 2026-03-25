@@ -65,6 +65,9 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
   // Transcript event bus for feature isolation
   private eventBus = new TranscriptEventBus();
 
+  // Cleanup handles for event bus subscriptions
+  private eventBusUnsubscribers: (() => void)[] = [];
+
   // Token usage tracker
   private tokenTracker = new TokenTracker(DEFAULT_CONTEXT_LIMIT);
 
@@ -102,37 +105,47 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
     setEventBus(this.eventBus);
 
     // Subscribe role detector to auto-detect agent roles from tool usage
-    subscribeRoleDetector(this.eventBus, this.agents, (msg) => {
-      this.webviewView?.webview.postMessage(msg);
-    });
+    this.eventBusUnsubscribers.push(
+      subscribeRoleDetector(this.eventBus, this.agents, (msg) => {
+        this.webviewView?.webview.postMessage(msg);
+      }),
+    );
 
     // Subscribe token tracker to forward usage updates to webview
-    subscribeTokenTracker(this.eventBus, this.tokenTracker, (msg) => {
-      this.webviewView?.webview.postMessage(msg);
-    });
+    this.eventBusUnsubscribers.push(
+      subscribeTokenTracker(this.eventBus, this.tokenTracker, (msg) => {
+        this.webviewView?.webview.postMessage(msg);
+      }),
+    );
 
     // Subscribe notification manager to forward colored notifications to webview
-    subscribeNotificationManager(this.eventBus, (msg) => {
-      this.webviewView?.webview.postMessage(msg);
-    });
+    this.eventBusUnsubscribers.push(
+      subscribeNotificationManager(this.eventBus, (msg) => {
+        this.webviewView?.webview.postMessage(msg);
+      }),
+    );
 
     // Subscribe metrics collector to aggregate session-wide stats
-    subscribeMetricsCollector(this.eventBus, this.metricsCollector);
+    this.eventBusUnsubscribers.push(
+      subscribeMetricsCollector(this.eventBus, this.metricsCollector),
+    );
 
     // Track tool history for inspection panel
-    this.eventBus.subscribe('toolStart', (event) => {
-      const agent = this.agents.get(event.agentId);
-      if (!agent) return;
-      if (!agent.toolHistory) agent.toolHistory = [];
-      agent.toolHistory.push({
-        toolName: event.toolName,
-        status: event.status || event.toolName,
-        timestamp: Date.now(),
-      });
-      if (agent.toolHistory.length > 10) {
-        agent.toolHistory = agent.toolHistory.slice(-10);
-      }
-    });
+    this.eventBusUnsubscribers.push(
+      this.eventBus.subscribe('toolStart', (event) => {
+        const agent = this.agents.get(event.agentId);
+        if (!agent) return;
+        if (!agent.toolHistory) agent.toolHistory = [];
+        agent.toolHistory.push({
+          toolName: event.toolName,
+          status: event.status || event.toolName,
+          timestamp: Date.now(),
+        });
+        if (agent.toolHistory.length > 10) {
+          agent.toolHistory = agent.toolHistory.slice(-10);
+        }
+      }),
+    );
 
     webviewView.webview.onDidReceiveMessage(async (message) => {
       if (message.type === 'openClaude') {
@@ -585,6 +598,12 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
   }
 
   dispose() {
+    // Clean up event bus subscriptions
+    for (const unsub of this.eventBusUnsubscribers) {
+      unsub();
+    }
+    this.eventBusUnsubscribers = [];
+
     this.layoutWatcher?.dispose();
     this.layoutWatcher = null;
     for (const id of [...this.agents.keys()]) {
